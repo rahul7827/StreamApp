@@ -63,6 +63,14 @@ export class MediaManager
 		 */
 		this.publishMode="camera"; //screen, screen+camera
 
+
+		/**
+		 * If more than one camera device is attached to the machine and current device is busy with other application 
+		 * then we will try to connect with other idle camera device. 
+		 */
+
+		this.tryAlternateDevice = null;
+
 		/**
 		 * The values of the above fields are provided as user parameters by the constructor.
 		 * TODO: Also some other hidden parameters may be passed here
@@ -236,38 +244,38 @@ export class MediaManager
 	getDevices(){
 		navigator.mediaDevices.enumerateDevices().then(devices => {
 			var deviceArray = new Array();
-			let checkAudio = false
-			let checkVideo = false
+			// let checkAudio = false
+			// let checkVideo = false
 			devices.forEach(device => {	
 				if (device.kind == "audioinput" || device.kind == "videoinput") {
 					deviceArray.push(device);
-					if(device.kind=="audioinput"){
-						checkAudio = true;
-					}
-					if(device.kind=="videoinput"){
-						checkVideo = true;
-					}
+					// if(device.kind=="audioinput"){
+					// 	checkAudio = true;
+					// }
+					// if(device.kind=="videoinput"){
+					// 	checkVideo = true;
+					// }
 				}
 			});
 			this.callback("available_devices", deviceArray);
 
 			//TODO: is the following part necessary. why?
-			if(checkAudio == false && this.localStream == null){
-				console.log("Audio input not found")
-				console.log("Retrying to get user media without audio")
-				if(this.inputDeviceNotFoundLimit < 2){
-					if(checkVideo != false){
-						this.openStream({video : true, audio : false}, this.mode)
-						this.inputDeviceNotFoundLimit++;
-					}else{
-						console.log("Video input not found")
-						alert("There is no video or audio input")
-					}
-				}
-				else{
-					alert("No input device found, publish is not possible");
-				}
-			}
+			// if(checkAudio == false && this.localStream == null){
+			// 	console.log("Audio input not found")
+			// 	console.log("Retrying to get user media without audio")
+			// 	if(this.inputDeviceNotFoundLimit < 2){
+			// 		if(checkVideo != false){
+			// 			this.openStream({video : true, audio : false}, this.mode)
+			// 			this.inputDeviceNotFoundLimit++;
+			// 		}else{
+			// 			console.log("Video input not found")
+			// 			alert("There is no video or audio input")
+			// 		}
+			// 	}
+			// 	else{
+			// 		alert("No input device found, publish is not possible");
+			// 	}
+			// }
 		}).catch(err => {
 			console.error("Cannot get devices -> error name: " + err.name + ": " + err.message);
 		});
@@ -522,7 +530,7 @@ export class MediaManager
 				if (error.name == "NotFoundError"){
 					this.getDevices()
 				}else{
-					this.callbackError(error.name, error.message);
+				this.callbackError(error.name, error.message);
 				}
 			});
 		}
@@ -913,6 +921,8 @@ export class MediaManager
 			this.localVideo.srcObject = this.localStream;
 		}
 
+		this.callback("updated_local_video_stream", true);
+
 		if (onEndedCallback != null) {
 			stream.getVideoTracks()[0].onended = function(event) {
 				onEndedCallback(event);
@@ -1005,7 +1015,7 @@ export class MediaManager
 			 };
 			 //If no matching device found don't adjust the media constraints let it be true instead of a device ID
 			 console.debug("Given deviceId = " + deviceId + " - Media constraints video property = " + this.mediaConstraints.video);
-			 return this.setVideoCameraSource(streamId, this.mediaConstraints, null, true, deviceId);
+			 return this.setVideoCameraSource(streamId, this.mediaConstraints, onEndedCallback, true, deviceId);
 		 })
  
 	 }

@@ -166,6 +166,14 @@ export class WebRTCAdaptor
 		 * if candidate protocol is in the list below.
 		 */
 		this.candidateTypes = ["udp", "tcp"];
+
+
+		/**
+		 * If more than one camera device is attached to the machine and current device is busy with other application 
+		 * then we will try to connect with other idle camera device. 
+		 */
+
+		this.tryAlternateDevice = null;
 		
 		/**
 		 * The values of the above fields are provided as this constructor parameter.

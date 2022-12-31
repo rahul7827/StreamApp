@@ -7,6 +7,7 @@
 	href="css/external/bootstrap4/bootstrap.min.css"
 	>
 <script src="js/external/adapter-latest.js"></script>
+<script src="js/external/jquery-3.4.1.min.js"></script>
 <link rel="stylesheet" href="css/common.css" />
 </head>
 <body>
@@ -74,7 +75,14 @@
 
 	var streamNameBox = document.getElementById("streamName");
 
+	var socket;
+	var soundHandle;
+
 	function join() {
+		initSocket();
+	}
+
+	function joinStream() {
 		webRTCAdaptor.join(streamNameBox.value);
 	}
 
@@ -96,6 +104,82 @@
 	
 	function unmuteLocalMic() {
 		webRTCAdaptor.unmuteLocalMic();
+	}
+
+	function initSocket() {
+		socket = io("http://localhost:3000", {query: {room:streamNameBox.value}});
+		console.log("connection establised", socket);
+
+		socket.on("CALL_REQUEST", function(data) {
+
+		});
+
+		socket.on("connect", function() {
+			console.log("Connected");
+			// socket.emit("REQUEST_OR_JOIN");
+		});
+
+		socket.on("disconnect", function() {
+			console.log("disconnected");
+		});
+
+		socket.on("CALL_APPROVAL", (data) => {
+			console.log("call_approved", data.is_approved);
+			if(data.is_approved === "APPROVAL_SENT"){
+				// sound then disable join button (socket init)
+				alert("Approval sent");
+			} else if(data.is_approved === "APPROVED"){
+				// hide preloader and connect
+				joinStream();
+			} else if(data.is_approved === "DECLINE") {
+				// Display denied
+				// close socket
+				alert("DECLINED");
+				socket.disconnect();
+			}
+		});
+		
+
+		socket.on("REQUEST_OR_JOIN_RESPONSE", (data) => {
+			console.log("Response Received", data.is_permission_required);
+
+			// Join Room
+			if(data.is_permission_required){
+				// RING BELL
+				playSound("play");
+				$("#callModal").modal('toggle');
+			} else {
+				// Start Publish to room
+				joinStream();
+			}
+		});
+
+		socket.on("NoSpaceForNewPeer", () => {
+			alert("NoSpaceForNewPeer")
+		}) 
+
+		socket.on("connect_error", err => {
+			console.log(err instanceof Error); // true
+			alert(err.message); // not authorized
+			// console.log(err.data); // { content: "Please retry later" }
+		});
+		
+	}
+
+	function update_call_status(status) {
+		socket.emit("CALL_APPROVAL", status);
+		// hide the preloader
+	}
+
+	function playSound(action){
+		if(action == "play") {
+			soundHandle = new Audio();
+			soundHandle.src = './node/ringing.mp3';
+			soundHandle.load();
+			soundHandle.play();
+		} else {
+			soundHandle.pause();
+		}    
 	}
 	
 	
@@ -119,12 +203,14 @@
 	          audio: true
 	        };
 	
-	var appName = location.pathname.substring(0, location.pathname.lastIndexOf("/")+1);
-	var websocketURL = "ws://" + location.hostname + ":5080" + appName + "websocket";
+	// var appName = location.pathname.substring(0, location.pathname.lastIndexOf("/")+1);
+	// var websocketURL = "ws://" + location.hostname + ":5080" + appName + "websocket";
 	
-	if (location.protocol.startsWith("https")) {
-		websocketURL = "wss://" + location.hostname + ":5443" + appName + "websocket";
-	}
+	// if (location.protocol.startsWith("https")) {
+	// 	websocketURL = "wss://" + location.hostname + ":5443" + appName + "websocket";
+	// }
+
+	var websocketURL = "wss://nettmagnet.com:5443/LiveApp/websocket";
 	
 	var webRTCAdaptor = new WebRTCAdaptor({
 		  websocket_url: websocketURL,
@@ -160,6 +246,49 @@
 		  }
 	  });
 	
+	  $("body").on("click", "#accept", () => {
+		playSound("pause");
+		$("#callModal").modal("toggle");
+		socket.emit("CALL_APPROVAL", {is_approved:"APPROVED"});
+	  }) 
+
+	  $("body").on("click", "#decline", () => {
+		playSound("pause");
+		$("#callModal").modal("toggle");
+
+		socket.emit("CALL_APPROVAL", {is_approved:"DECLINE"});
+	  })
 
 </script>
+<script src="js/external/popper.min.js" crossorigin="anonymous"></script>
+	<script src="js/external/bootstrap.min.js"  crossorigin="anonymous"></script>	
+<script src="js/external/socket.io.min.js"></script>
+
+ <!-- The Modal -->
+ <div class="modal fade" id="callModal" data-backdrop="static">
+    <div class="modal-dialog modal-sm">
+      <div class="modal-content">
+      
+        <!-- Modal Header -->
+        <div class="modal-header">
+          <h4 class="modal-title">Incoming Call</h4>
+          <!-- <button type="button" class="close" data-dismiss="modal">&times;</button> -->
+        </div>
+        
+        <!-- Modal body -->
+        <div class="modal-body">
+          <button class="btn btn-primary" id="accept">Accept</button>
+		  <button class="btn btn-danger ml-2" id="decline">Decline</button>
+        </div>
+        
+        <!-- Modal footer -->
+        <div class="modal-footer">
+          <!-- <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button> -->
+        </div>
+        
+      </div>
+    </div>
+  </div>
+
+
 </html>

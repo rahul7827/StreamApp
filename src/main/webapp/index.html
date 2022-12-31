@@ -503,6 +503,10 @@ video {
 		webRTCAdaptor.applyConstraints(constraint);
 	}
 
+	// function cb(tmp){
+	// 	console.log("cb logged", tmp);
+	// }
+
 
 	  var pc_config = {
 			'iceServers' : [ {
@@ -533,17 +537,23 @@ video {
 		audio: true,
 	};
 
-	var appName = location.pathname.substring(0, location.pathname.lastIndexOf("/")+1);
-	var path =  location.hostname + ":" + location.port + appName + "websocket?rtmpForward=" + rtmpForward;
-	var websocketURL =  "ws://" + path;
+	//var appName = location.pathname.substring(0, location.pathname.lastIndexOf("/")+1);
+	//var path =  location.hostname + ":" + location.port + appName + "websocket?rtmpForward=" + rtmpForward;
+	//var websocketURL =  "ws://" + path;
 	
-	if (location.protocol.startsWith("https")) {
-		websocketURL = "wss://" + path;
-	}
+	// if (location.protocol.startsWith("https")) {
+	// 	websocketURL = "wss://" + path;
+	// }
+    var websocketURL =  "wss://ms250.sitesdemo.xyz:5443/FreeShow/websocket";
+
+	//websocketURL = "wss://ms250.sitesdemo.xyz:5443/LiveApp/websocket?rtmpForward="+ rtmpForward;
 
 	var	webRTCAdaptor = null;
 	var selectedRadio = null;
 	var selectedAudio = null;
+	var tryAlternateDevice = false;
+	var video_devices = new Array();
+	var video_device_counter = 0;
 	
 	function initWebRTCAdaptor(publishImmediately, autoRepublishEnabled) 
 	{
@@ -556,6 +566,7 @@ video {
 				debug:debug,
 				bandwidth:maxVideoBitrateKbps,
 				dataChannelEnabled : true,
+				tryAlternateDevice : tryAlternateDevice,
 				callback : (info, obj) => {
 					if (info == "initialized") {
 						console.log("initialized");
@@ -707,9 +718,11 @@ video {
 						}
 					}
 					else if (info == "available_devices") {
+						console.log("available_devices called");
 						var videoHtmlContent = "";
 						var audioHtmlContent = "";
 						var devices = new Array();
+						video_devices = [];
 						
 						var i = 0;
 						var cameraIndex = 0;
@@ -717,12 +730,13 @@ video {
 						obj.forEach(function(device) {
 							var label = device.label;
 
-							devices.forEach(function(same){
-								if (same == device.label){
-									i += 1;
-									label = device.label + " - " + i
-								}
-							});							
+						// Do not know why this is useful
+							// devices.forEach(function(same){
+							// 	if (same == device.label){									
+							// 		i += 1;
+							// 		label = device.label + " - " + i
+							// 	}
+							// });							
 
 							if (device.kind == "videoinput") 
 							{
@@ -730,6 +744,8 @@ video {
 									label = "Cam-" + cameraIndex;
 								}
 								cameraIndex++;
+								let currentDevice = {label:label,deviceId:device.deviceId};
+								video_devices.push(currentDevice);
 								videoHtmlContent += getCameraRadioButton(label, device.deviceId);
 							}
 							else if (device.kind == "audioinput")
@@ -782,7 +798,17 @@ video {
 						startAnimation();
 						console.log(info + "notification received");
 					}
-					else {
+					else if(info == "updated_local_video_stream") {
+						console.log("Local Video Updated");
+						webRTCAdaptor.mediaManager.getDevices();
+						
+						setTimeout(() => {
+							let tmp = video_device_counter;
+							document.getElementById(video_devices[tmp].deviceId).checked = true;
+							video_device_counter = 0;
+						}, 2000);
+
+					}else {
 						console.log( info + " notification received");
 					}
 				},
@@ -822,8 +848,37 @@ video {
 						else if (error.indexOf("NotAllowedError") != -1 || error.indexOf("PermissionDeniedError") != -1) {
 							errorMessage = "You are not allowed to access camera and mic.";
 						}
-						else if (error.indexOf("TypeError") != -1) {
-							errorMessage = "Video/Audio is required";
+						else if (error.indexOf("TypeError") != -1 || error.indexOf("AbortError") != -1 ) {
+							// May be selected device is busy with other application. 
+							// We can try selecting other device, if available
+
+							if(video_devices.length == 0){
+								webRTCAdaptor.mediaManager.getDevices();
+							}
+
+							if(tryAlternateDevice){
+
+								setTimeout(() => {
+									console.log(video_devices, video_devices.length, video_device_counter);
+									video_device_counter += 1;
+									if( (video_devices.length > 1) && (video_devices.length > video_device_counter) ){
+										console.log("Switching camera", video_devices[video_device_counter].deviceId, video_devices[video_device_counter].label);
+									
+										//document.getElementById(video_devices[video_device_counter].deviceId).checked = true;
+										// $(":radio[value="+video_devices[video_device_counter].deviceId+ "]").prop("checked", true);
+										webRTCAdaptor.switchVideoCameraCapture(streamId, video_devices[video_device_counter].deviceId);
+									} else {
+										errorMessage = "Video/Audio is required";
+									}
+								}, 2000);
+								
+
+
+							} else {
+								errorMessage = "Video/Audio is required";
+							}
+
+
 						}
 						else if (error.indexOf("getUserMediaIsNotAllowed") != -1){
 							errorMessage = "You are not allowed to reach devices from an insecure origin, please enable ssl";
@@ -838,7 +893,7 @@ video {
 						else {
 							errorMessage = error
 						}
-						alert(errorMessage);
+						//alert(errorMessage);
 							
 					}
 					console.error(errorMessage);

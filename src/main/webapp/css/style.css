@@ -4103,4 +4103,99 @@ address {
   z-index: 10;
 }
 
+/*by rahul7827*/
+#myTab .nav-link{
+  padding: .3rem .5rem!important;
+}
+#myTab a {
+  font-size: .4rem;
+}
+
+
+.pchat {
+  padding-left: 0;
+  margin: 0;
+  list-style-type: none;
+  overflow-y: scroll;
+  max-height: 78.6%;
+
+  @media (max-width: 1199.98px) {
+      max-height: 74.6%;
+  }
+}
+
+.pchat li {
+  padding: 10px 30px;
+}
+
+.pchat h2,
+.pchat h3 {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: normal;
+}
+
+.pchat h3 {
+  color: #bbb;
+}
+
+.pchat .entete {
+  margin-bottom: 5px;
+}
+
+.pchat .message {
+  overflow: hidden;
+  padding: 20px;
+  font-size: 14px;
+  padding: 20px;
+  color: #fff;
+  line-height: 20px;
+  max-width: 100%;
+  display: inline-block;
+  text-align: left;
+  border-radius: 5px;
+}
+
+.pchat .me {
+  text-align: right;
+}
+
+.pchat .you .message {
+  background-color: #f7f7f7;
+  color: #5d5d5d;
+}
+
+.pchat .me .message {
+  background-color: #f9e6e7;
+  color: #353535;
+  font-weight: 500;
+}
+
+.pchat .triangle {
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 10px 10px 10px;
+}
+
+.pchat .you .triangle {
+  border-color: transparent transparent #f7f7f7 transparent;
+  margin-left: 15px;
+}
+
+.pchat .me .triangle {
+  border-color: transparent transparent #f9e6e7 transparent;
+  margin-right: 15px;
+  margin-top: -10px;
+  float: right;
+
+  @media (max-width: 1199.98px) {
+      margin-left: 163px;
+  }
+
+  @media (max-width: 575.98px) {
+      margin-left: 220px;
+  }
+}
+
 /*# sourceMappingURL=style.css.map */
